@@ -1,3 +1,3 @@
 # professional backend
 
-In this we will learn about to handle a project professionally..
+In this we will learn about how to handle a project professionally..
