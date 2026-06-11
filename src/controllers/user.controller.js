@@ -10,16 +10,17 @@ const registerUser = asyncHandler( async (req, res, next) => {
     const {fullname, email, username, password} = req.body
     
     //!checking empty fields
-    if(!fullname || !email || !username || !password){
-        throw new apiError(400, "all fields are required..")
-    }
-    // if(              //!advance way to check empty fields
-    //     [fullname, email, username, password].some((field) => {
-    //         return field?.trim() === ""
-    //     })
-    // ){
+    // if(!fullname || !email || !username || !password){
     //     throw new apiError(400, "all fields are required..")
     // }
+    //!advance way to check empty fields
+    if(              
+        [fullname, email, username, password].some((field) => {
+            return field?.trim() === ""
+        })
+    ){
+        throw new apiError(400, "all fields are required..")
+    }
 
     //!check if user already exists
     const existedUser = await User.findOne({
@@ -55,7 +56,7 @@ const registerUser = asyncHandler( async (req, res, next) => {
     })
 
     //!remove sensitive info
-    const createdUser = await User.findById(_id).select("-password -refreshToken")
+    const createdUser = await User.findById(user._id).select("-password -refreshToken")
     if(!createdUser){
         throw new apiError(500, "internal server error while registering user")
     }
