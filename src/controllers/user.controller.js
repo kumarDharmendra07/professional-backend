@@ -4,6 +4,7 @@ import { User } from "../models/User.models.js";
 import router from "../rotues/user.routes.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { apiResponse } from "../utils/apiResponse.js";
+import jwt from "jsonwebtoken"
 
 
 const generateAccessTokenAndRefreshToken = async (user_Id) => {
@@ -172,7 +173,52 @@ const logoutUser = asyncHandler( async (req, res, next) => {
         )
 })
 
-export { registerUser, loginUser, logoutUser }
+const refreshAccessToken = asyncHandler( async (req, res, next) => {
+    try {
+        const incomingRefreshToken = req.cookie.refreshToken || req.body.refreshToken
+    
+        if(!incomingRefreshToken){
+            throw new apiError(401, "Unauthorized Request")
+        }
+    
+        const decodedToken = jwt.verify(
+            incomingRefreshToken,
+            process.env.REFRESH_TOKEN
+        )
+    
+        const user = await User.findById(decodedToken?._id)
+        if(!user){
+            throw new apiError(401, "Invalid refresh token")
+        }
+    
+        if(incomingRefreshToken !== user.refreshToken){
+            throw new apiError(401, "Refresh token expired or invalid!")
+        }
+    
+        const cookieOptions = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production"
+        }
+    
+        const {  accessToken, newRefreshToken} = await generateAccessTokenAndRefreshToken(user._id)
+    
+        return res
+            .status(200)
+            .cookie("accessToken", accessToken, cookieOptions)
+            .cookie("refreshToken", newRefreshToken, cookieOptions)
+            .json(
+                new apiResponse(
+                    200,
+                    {accessToken, refreshToken : newRefreshToken},
+                    "access token refreshed"
+                )
+            )
+    } catch (error) {
+        throw new apiError(401, error?.message) || "invalid refresh token"
+    }
+})
+
+export { registerUser, loginUser, logoutUser, refreshAccessToken }
 
 // 1. Receive data from request body
 //    - username
